@@ -1,0 +1,28 @@
+services:
+  api:
+      build: .
+      ports:
+        - "8000:8000"
+      volumes:
+        - ./db:/app/db
+      env_file:             # <--- ADD THIS
+        - .env              # <--- ADD THIS
+      environment:
+        - OLLAMA_HOST=host.docker.internal
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+
+  ui:
+    build: .
+    command: ["python", "-m", "streamlit", "run", "src/ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
+  vectordb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./chroma_data:/chroma/data
