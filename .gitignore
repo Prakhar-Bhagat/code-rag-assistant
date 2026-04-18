@@ -5,3 +5,5 @@ db/
 chroma_data/
 *.zip
 extracted_repo/
+tempCodeRunnerFile.py
+**/tempCodeRunnerFile.py
