@@ -36,7 +36,6 @@ if prompt := st.chat_input("Ask a question about the codebase..."):
     with st.chat_message("assistant"):
         with st.spinner("Thinking & searching codebase..."):
             try:
-                # -> THIS IS THE CRITICAL UPDATE <-
                 # We inject the headers so FastAPI knows we have permission
                 response = requests.post(
                     f"{API_URL}/query", 
@@ -53,7 +52,6 @@ if prompt := st.chat_input("Ask a question about the codebase..."):
                 if citations:
                     with st.expander("Sources"):
                         for cite in citations:
-                            # Pro-tip: Changed language="text" to language="python" for better syntax highlighting!
                             st.code(cite, language="python")
                             
                 # Save to history
