@@ -8,6 +8,7 @@ from .parser import load_codebase
 
 
 class IngestionPipeline:
+    IGNORE_DIRS = {".git", "venv", "env", "__pycache__", ".venv", "node_modules"}
 
     def __init__(self, db_path="./db"):
         # Ensure your Ollama is running and you have run: ollama pull nomic-embed-text
@@ -77,8 +78,23 @@ class IngestionPipeline:
             print("No documents found! Check if .py files are in the folder.")
             return
 
-        # NEW: Filter out files we've already ingested
-        new_docs = self.filter_unmodified_files(raw_code_docs)
+        clean_docs = []
+        for doc in raw_code_docs:
+            source_path = doc.metadata.get('source', '')
+            # Check if the file path contains any of our ignored directories (like 'venv')
+            path_parts = source_path.split(os.sep)
+            if not any(ignored in path_parts for ignored in self.IGNORE_DIRS):
+                clean_docs.append(doc)
+            else:
+                print(f"Skipping ignored file: {source_path}")
+
+        if not clean_docs:
+            print("--- No valid code files found after filtering out ignored directories! ---")
+            return self.get_retriever()
+        # ---------------------------------------------------------
+
+        # Filter out files we've already ingested
+        new_docs = self.filter_unmodified_files(clean_docs)
 
         if not new_docs:
             print("--- No new or modified files detected. Skipping embedding! ---")
@@ -87,8 +103,7 @@ class IngestionPipeline:
         print(f"--- Processing {len(new_docs)} NEW/MODIFIED files. Splitting into chunks... ---")
         python_splitter = RecursiveCharacterTextSplitter.from_language(
             language=Language.PYTHON, chunk_size=400, chunk_overlap=50
-        )
-        # Make sure to split the filtered new_docs, not the raw_code_docs
+        )        
         texts = python_splitter.split_documents(new_docs)
 
         print(f"--- Embedding {len(texts)} chunks into ChromaDB at {self.db_path} ---")
@@ -108,8 +123,8 @@ class IngestionPipeline:
             collection_metadata={"hnsw:space": "cosine"}
         )
         return vectorstore.as_retriever(
-            search_type="similarity",  # Keeping your similarity setting
-            search_kwargs={"k": 4}     # Keeping your k=4 setting
+            search_type="similarity",
+            search_kwargs={"k": 4}
         )
 
     def unzip_repo(self, zip_path, extract_to):
@@ -122,7 +137,7 @@ class IngestionPipeline:
         vectorstore = Chroma(
             persist_directory=self.db_path,
             embedding_function=self.embeddings,
-            collection_metadata={"hnsw:space": "cosine"} # Added to match your DB config
+            collection_metadata={"hnsw:space": "cosine"}
         )
         results = vectorstore.similarity_search_with_score(query, k=4)
         return [(doc.metadata.get("source"), score) for doc, score in results]

@@ -5,8 +5,8 @@ services:
         - "8000:8000"
       volumes:
         - ./db:/app/db
-      env_file:             # <--- ADD THIS
-        - .env              # <--- ADD THIS
+      env_file:            
+        - .env              
       environment:
         - OLLAMA_HOST=host.docker.internal
       extra_hosts:
@@ -19,6 +19,8 @@ services:
       - "8501:8501"
     depends_on:
       - api
+    env_file:            
+      - .env
 
   vectordb:
     image: chromadb/chroma:latest
